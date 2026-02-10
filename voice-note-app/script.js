@@ -14,11 +14,14 @@ document.addEventListener('DOMContentLoaded', () => {
     const FRICTION = 0.95; // How quickly it slows down
     const VELOCITY_SCALE = 0.5; // Sensitivity
 
-    // Audio Context (for visualizer)
+    // Audio State
+    let isAudioSetup = false;
     let audioContext;
     let analyser;
     let source;
-    let isAudioSetup = false;
+
+    // Check if running on local file - if so, we must SIMULATE visualizer to avoid silent audio
+    const isLocalFile = window.location.protocol === 'file:';
 
     // Resize canvas
     function resizeCanvas() {
@@ -28,10 +31,49 @@ document.addEventListener('DOMContentLoaded', () => {
     resizeCanvas();
     window.addEventListener('resize', resizeCanvas);
 
-    // Setup Audio Context (must be triggered by user interaction)
-    function setupAudio() {
-        if (isAudioSetup) return;
+    // Debug helper
+    function log(msg) {
+        console.log(msg);
+        let logBox = document.getElementById('debug-log');
+        if (!logBox) {
+            logBox = document.createElement('div');
+            logBox.id = 'debug-log';
+            logBox.style.position = 'absolute';
+            logBox.style.top = '10px';
+            logBox.style.left = '10px';
+            logBox.style.background = 'rgba(0,0,0,0.7)';
+            logBox.style.color = '#fff';
+            logBox.style.padding = '5px';
+            logBox.style.borderRadius = '4px';
+            logBox.style.fontSize = '12px';
+            logBox.style.maxWidth = '200px';
+            logBox.style.zIndex = '9999';
+            logBox.style.pointerEvents = 'none';
+            document.body.appendChild(logBox);
+        }
+        logBox.innerHTML = msg + '<br>' + logBox.innerHTML;
+    }
 
+    // Setup Audio
+    function setupAudio() {
+        if (isAudioSetup) {
+            // If already setup, just make sure context is running (if using one)
+            if (audioContext && audioContext.state === 'suspended') {
+                audioContext.resume();
+            }
+            return;
+        }
+
+        //log("Setting up audio...");
+
+        if (isLocalFile) {
+            // LOCAL FILE MODE: Do NOT use Web Audio API for source to avoid CORS silence
+            //log("Local file detected. Using simulated visualizer to ensure sound plays.");
+            isAudioSetup = true;
+            return;
+        }
+
+        // WEB SERVER MODE: Use full Web Audio API
         try {
             audioContext = new (window.AudioContext || window.webkitAudioContext)();
             analyser = audioContext.createAnalyser();
@@ -41,12 +83,19 @@ document.addEventListener('DOMContentLoaded', () => {
 
             analyser.fftSize = 64;
             isAudioSetup = true;
+            log("Audio setup complete (Web Mode)");
         } catch (e) {
-            console.log("Audio setup failed (likely waiting for interaction)", e);
+            log("Audio setup failed: " + e.message);
+            // Fallback to simple mode if context fails
+            isAudioSetup = true;
         }
     }
 
-    // Geometry helper: Get angle from center of crank to point (x,y)
+    // Allow auto-unlock
+    document.addEventListener('click', setupAudio);
+    document.addEventListener('touchstart', setupAudio);
+
+    // Geometry helper
     function getAngle(x, y) {
         const rect = crankContainer.getBoundingClientRect();
         const centerX = rect.left + rect.width / 2;
@@ -61,38 +110,28 @@ document.addEventListener('DOMContentLoaded', () => {
         const clientY = e.touches ? e.touches[0].clientY : e.clientY;
         lastMouseAngle = getAngle(clientX, clientY);
 
-        // Initialize audio on first touch
-        if (!isAudioSetup) {
-            setupAudio();
-            // Try to play silent momentarily to unlock audio on iOS
-            audio.play().then(() => audio.pause()).catch(() => { });
+        setupAudio();
+
+        // Ensure playback starts/unlocks
+        if (audio.paused) {
+            // Play momentary silence or just try to play/pause to unlock
+            // Actually, we process playback in the loop based on velocity
         }
     }
 
     function moveDrag(e) {
         if (!isDragging) return;
-        e.preventDefault(); // Prevent scrolling
-
+        e.preventDefault();
         const clientX = e.touches ? e.touches[0].clientX : e.clientX;
         const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-
         const angle = getAngle(clientX, clientY);
         let delta = angle - lastMouseAngle;
-
-        // Handle wrapping (e.g. going from PI to -PI)
         if (delta > Math.PI) delta -= Math.PI * 2;
         if (delta < -Math.PI) delta += Math.PI * 2;
 
-        // Apply rotation
-        // We only care about the magnitude of movement for energy, 
-        // but direction for visual. Music box usually only winds one way?
-        // Let's allow both ways but only play if "winding forward" (clockwise)
-
         currentAngle += delta;
-        velocity = delta * 5; // Add momentum
-
+        velocity = delta * 5;
         lastMouseAngle = angle;
-
         updateCrankVisual();
     }
 
@@ -104,16 +143,13 @@ document.addEventListener('DOMContentLoaded', () => {
     crankContainer.addEventListener('mousedown', startDrag);
     window.addEventListener('mousemove', moveDrag);
     window.addEventListener('mouseup', endDrag);
-
     crankContainer.addEventListener('touchstart', startDrag, { passive: false });
     window.addEventListener('touchmove', moveDrag, { passive: false });
     window.addEventListener('touchend', endDrag);
 
     // Visual Update
     const crankSpinner = document.getElementById('crank-spinner');
-
     function updateCrankVisual() {
-        // Just rotate the whole spinner container
         const deg = currentAngle * (180 / Math.PI);
         crankSpinner.style.transform = `rotate(${deg}deg)`;
     }
@@ -125,94 +161,125 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (!isDragging) {
             velocity *= FRICTION;
-            currentAngle += velocity; // Apply velocity
+            currentAngle += velocity;
             updateCrankVisual();
-        } else {
-            // In dragging mode, currentAngle is updated by moveDrag
         }
 
-        // prevent tiny precision errors
         if (Math.abs(velocity) < 0.001) velocity = 0;
 
         // Audio Logic
         const speed = Math.abs(velocity);
 
-        // Threshold to play
         if (speed > 0.02) {
             if (audio.paused) {
-                // simple play
-                const playPromise = audio.play();
-                if (playPromise !== undefined) {
-                    playPromise.catch(error => {
-                        console.log("Playback prevented (waiting for interaction): " + error);
-                    });
-                }
+                const p = audio.play();
+                if (p) p.catch(e => { /* Ignore auto-play errors until interaction */ });
             }
-
-            // Map winding speed (approx 0.0 to 0.5 rad/frame) to playback rate
-            // 0.05 speed -> 0.8 rate
-            // 0.30 speed -> 1.5 rate
             let rate = 0.5 + (speed * 3);
             if (rate > 1.5) rate = 1.5;
             if (rate < 0.8) rate = 0.8;
-
             audio.playbackRate = rate;
-            audio.volume = Math.min(1, speed * 5); // Fade in quickly
+            audio.volume = Math.min(1, speed * 5);
         } else {
             if (!audio.paused) {
-                // Fade out?
                 audio.pause();
             }
         }
 
-        drawVisualizer();
+        drawVisualizer(speed);
         requestAnimationFrame(loop);
     }
 
-    function drawVisualizer() {
-        if (!isAudioSetup) return;
+    function drawVisualizer(speed) {
+        // Fallback line for "waiting" state
+        if (!isAudioSetup) {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = 'rgba(0,0,0,0.1)';
+            ctx.fillRect(0, canvas.height - 4, canvas.width, 4);
+            return;
+        }
 
-        const bufferLength = analyser.frequencyBinCount;
-        const dataArray = new Uint8Array(bufferLength);
-        analyser.getByteFrequencyData(dataArray);
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-        ctx.clearRect(0, 0, canvas.width, canvas.height); // Clear
-
-        // Calculate progress
+        // Calculate progress logic (universal)
         let progress = 0;
         if (audio.duration > 0 && !isNaN(audio.duration)) {
             progress = audio.currentTime / audio.duration;
         }
 
-        // Create Gradient for Progress Bar Effect
-        // Active color (left) -> Inactive color (right)
+        // Gradient
         const gradient = ctx.createLinearGradient(0, 0, canvas.width, 0);
-
-        // Define colors matching style.css
-        const activeColor = '#db2777'; // --accent-pink
-        const inactiveColor = '#e5e7eb'; // muted gray/white
-
-        // Hard stop gradient for clear progress indication
+        const activeColor = '#db2777';
+        const inactiveColor = '#e5e7eb';
         const stopPoint = Math.max(0, Math.min(1, progress));
-
         gradient.addColorStop(0, activeColor);
         gradient.addColorStop(stopPoint, activeColor);
         gradient.addColorStop(Math.min(1, stopPoint + 0.001), inactiveColor);
         gradient.addColorStop(1, inactiveColor);
-
         ctx.fillStyle = gradient;
 
+        const bufferLength = 32; // Fixed bars for simplicity
         const barWidth = (canvas.width / bufferLength) * 2.5;
-        let barHeight;
         let x = 0;
 
+        let dataArray;
+
+        // If using real analyser (Web Mode)
+        if (analyser && !isLocalFile) {
+            dataArray = new Uint8Array(analyser.frequencyBinCount);
+            analyser.getByteFrequencyData(dataArray);
+        }
+
         for (let i = 0; i < bufferLength; i++) {
-            barHeight = dataArray[i] / 2;
+            let barHeight = 4; // Min height
 
-            // Draw bar with the gradient fill
+            if (analyser && !isLocalFile && dataArray) {
+                // Real data
+                // Map larger buffer to 32 bars roughly
+                const index = Math.floor(i * (dataArray.length / bufferLength));
+                barHeight = dataArray[index] / 2;
+            } else {
+                // Simulated data based on speed
+                // Randomness + Speed factor
+                if (speed > 0.02) {
+                    barHeight = Math.random() * (speed * 100) + 10;
+                }
+            }
+
+            if (barHeight < 4) barHeight = 4;
+            // Cap height
+            if (barHeight > canvas.height) barHeight = canvas.height;
+
             ctx.fillRect(x, canvas.height - barHeight, barWidth, barHeight);
-
             x += barWidth + 1;
+        }
+
+        updatePhotos(progress);
+    }
+
+    // Photo Sequence Logic
+    const photos = document.querySelectorAll('.photo');
+    let currentPhotoIndex = 0;
+
+    function updatePhotos(progress) {
+        if (photos.length === 0) return;
+
+        // Map progress (0.0 to 1.0) to photo index
+        let index = Math.floor(progress * photos.length);
+
+        // Clamp index
+        if (index >= photos.length) index = photos.length - 1;
+        if (index < 0) index = 0;
+
+        // Only update class if changed
+        if (index !== currentPhotoIndex) {
+            // Remove active from old
+            photos[currentPhotoIndex].classList.remove('active');
+
+            // Add active to new
+            photos[index].classList.add('active');
+
+            currentPhotoIndex = index;
         }
     }
 

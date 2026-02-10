@@ -55,9 +55,11 @@ body {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 2rem;
+    gap: 1rem;
+    /* Reduced from 2rem to bring winder up */
     height: 100%;
-    justify-content: space-evenly;
+    justify-content: center;
+    /* Changed from space-evenly to center with gap */
 }
 
 .header {
@@ -104,11 +106,27 @@ h1 {
     border: 1px solid rgba(0, 0, 0, 0.05);
 }
 
-#main-photo {
+#photo-stack {
+    width: 100%;
+    height: 100%;
+    position: relative;
+}
+
+.photo {
     width: 100%;
     height: 100%;
     object-fit: cover;
-    display: block;
+    position: absolute;
+    top: 0;
+    left: 0;
+    opacity: 0;
+    transition: opacity 2s ease-in-out;
+    /* Slow fade */
+}
+
+.photo.active {
+    opacity: 1;
+    z-index: 1;
 }
 
 #audio-visualizer {
@@ -157,9 +175,7 @@ h1 {
     height: 100%;
     position: relative;
     border-radius: 50%;
-    /* border: 1px dashed rgba(0,0,0,0.1); Debugging circle */
     pointer-events: none;
-    /* Let container handle events */
 }
 
 .crank-axis {
@@ -183,7 +199,6 @@ h1 {
     top: 50%;
     left: 50%;
     transform-origin: 0% 50%;
-    /* Rotate from center */
     transform: translateY(-50%);
     border-radius: 6px;
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
@@ -198,7 +213,6 @@ h1 {
     position: absolute;
     top: 50%;
     left: 50%;
-    /* Move to end of arm (60px) */
     transform: translate(46px, -50%);
     box-shadow: 4px 4px 8px rgba(0, 0, 0, 0.3);
     z-index: 6;
@@ -221,5 +235,52 @@ h1 {
 
     100% {
         opacity: 0.4;
+    }
+}
+
+/* Mobile Responsiveness */
+@media (max-width: 480px) {
+    .app-container {
+        padding: 0.5rem;
+    }
+
+    h1 {
+        font-size: 1.8rem;
+    }
+
+    .polaroid-frame {
+        max-width: 80%;
+        /* Smaller Photo */
+        padding: 0.6rem 0.6rem 2rem 0.6rem;
+    }
+
+    .caption {
+        font-size: 1rem;
+        margin-top: 0.5rem;
+    }
+
+    /* Make crank bigger */
+    .crank-container {
+        width: 180px;
+        height: 180px;
+        margin-top: 1rem;
+    }
+
+    /* Scale UP crank components */
+    .crank-arm {
+        width: 70px;
+        height: 14px;
+    }
+
+    .crank-handle {
+        width: 32px;
+        height: 32px;
+        transform: translate(54px, -50%);
+        /* Adjust for arm length */
+    }
+
+    .crank-axis {
+        width: 20px;
+        height: 20px;
     }
 }

@@ -26,9 +26,21 @@
 
             <div class="polaroid-frame">
                 <div class="photo-area">
-                    <!-- Placeholder image, user should replace this -->
-                    <img src="assets/us.jpg" alt="Us" id="main-photo"
-                        onerror="this.src='https://placehold.co/600x600/pink/white?text=Our+Photo'">
+                    <!-- Photo Stack for 6-Photo Sequence -->
+                    <div id="photo-stack">
+                        <img src="assets/1.jpeg" class="photo active" alt="Memory 1"
+                            onerror="this.src='https://placehold.co/600x600/pink/white?text=1'">
+                        <img src="assets/2.jpeg" class="photo" alt="Memory 2"
+                            onerror="this.src='https://placehold.co/600x600/pink/white?text=2'">
+                        <img src="assets/3.jpeg" class="photo" alt="Memory 3"
+                            onerror="this.src='https://placehold.co/600x600/pink/white?text=3'">
+                        <img src="assets/4.jpeg" class="photo" alt="Memory 4"
+                            onerror="this.src='https://placehold.co/600x600/pink/white?text=4'">
+                        <img src="assets/5.jpeg" class="photo" alt="Memory 5"
+                            onerror="this.src='https://placehold.co/600x600/pink/white?text=5'">
+                        <img src="assets/us.jpeg" class="photo" alt="Us"
+                            onerror="this.src='https://placehold.co/600x600/pink/white?text=Us'">
+                    </div>
                     <canvas id="audio-visualizer"></canvas>
                 </div>
                 <div class="caption">
@@ -51,7 +63,6 @@
         </div>
 
         <audio id="voice-note" loop>
-            <!-- User should replace this file -->
             <source src="assets/voice-note.mp3" type="audio/mpeg">
             Your browser does not support the audio element.
         </audio>
