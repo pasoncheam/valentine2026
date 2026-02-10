@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>For My Valentine</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@400;700&family=Playfair+Display:ital,wght@0,400;0,700;1,400&display=swap"
+        rel="stylesheet">
+</head>
+
+<body>
+    <div class="app-container">
+        <!-- Floating hearts background -->
+        <div class="hearts-bg" id="hearts-bg"></div>
+
+        <div class="main-content">
+            <header class="header">
+                <h1>Happy Valentine's Day</h1>
+                <p class="subtitle">Keep winding to listen...</p>
+            </header>
+
+            <div class="polaroid-frame">
+                <div class="photo-area">
+                    <!-- Placeholder image, user should replace this -->
+                    <img src="assets/us.jpg" alt="Us" id="main-photo"
+                        onerror="this.src='https://placehold.co/600x600/pink/white?text=Our+Photo'">
+                    <canvas id="audio-visualizer"></canvas>
+                </div>
+                <div class="caption">
+                    <p>Thinking of You ❤️</p>
+                </div>
+            </div>
+
+            <div class="controls-area">
+                <div class="crank-container" id="crank-container">
+                    <div id="crank-spinner">
+                        <div class="crank-axis"></div>
+                        <div class="crank-arm"></div>
+                        <div class="crank-handle"></div>
+                    </div>
+                </div>
+                <div class="instruction-hint">
+                    <span>↻ Wind me</span>
+                </div>
+            </div>
+        </div>
+
+        <audio id="voice-note" loop>
+            <!-- User should replace this file -->
+            <source src="assets/voice-note.mp3" type="audio/mpeg">
+            Your browser does not support the audio element.
+        </audio>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+
+</html>
