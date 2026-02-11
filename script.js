@@ -190,15 +190,11 @@ document.addEventListener('DOMContentLoaded', () => {
         requestAnimationFrame(loop);
     }
 
-    function drawVisualizer(speed) {
-        // Fallback line for "waiting" state
-        if (!isAudioSetup) {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            ctx.fillStyle = 'rgba(0,0,0,0.1)';
-            ctx.fillRect(0, canvas.height - 4, canvas.width, 4);
-            return;
-        }
+    // Generate static waveform for "always visible" effect
+    const bufferLength = 32;
+    const pseudoWaveform = new Array(bufferLength).fill(0).map(() => Math.random() * 50 + 10);
 
+    function drawVisualizer(speed) {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
 
         // Calculate progress logic (universal)
@@ -218,7 +214,6 @@ document.addEventListener('DOMContentLoaded', () => {
         gradient.addColorStop(1, inactiveColor);
         ctx.fillStyle = gradient;
 
-        const bufferLength = 32; // Fixed bars for simplicity
         // Calculate dynamic bar width to fit exact canvas width
         const barWidth = (canvas.width / bufferLength) - 1;
         let x = 0;
@@ -232,18 +227,22 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         for (let i = 0; i < bufferLength; i++) {
-            let barHeight = 4; // Min height
+            let barHeight = pseudoWaveform[i]; // Default to static waveform
 
             if (analyser && !isLocalFile && dataArray) {
-                // Real data
+                // Real data mixing
                 // Map larger buffer to 32 bars roughly
                 const index = Math.floor(i * (dataArray.length / bufferLength));
-                barHeight = dataArray[index] / 2;
+                // Mix real data with static shape for a "live" feel that returns to shape
+                const realHeight = dataArray[index] / 2;
+                if (speed > 0.01) {
+                    barHeight = realHeight;
+                }
             } else {
                 // Simulated data based on speed
-                // Randomness + Speed factor
                 if (speed > 0.02) {
-                    barHeight = Math.random() * (speed * 100) + 10;
+                    // Jitter the static waveform slightly when "playing"
+                    barHeight += (Math.random() - 0.5) * (speed * 50);
                 }
             }
 
