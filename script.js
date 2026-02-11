@@ -76,6 +76,18 @@ document.addEventListener('DOMContentLoaded', () => {
         // WEB SERVER MODE: Use full Web Audio API
         try {
             audioContext = new (window.AudioContext || window.webkitAudioContext)();
+
+            // iOS UNLOCK: Play silent buffer to unlock AudioContext
+            const buffer = audioContext.createBuffer(1, 1, 22050);
+            const node = audioContext.createBufferSource();
+            node.buffer = buffer;
+            node.connect(audioContext.destination);
+            node.start(0);
+
+            if (audioContext.state === 'suspended') {
+                audioContext.resume();
+            }
+
             analyser = audioContext.createAnalyser();
             source = audioContext.createMediaElementSource(audio);
             source.connect(analyser);
