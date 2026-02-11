@@ -95,7 +95,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             analyser.fftSize = 64;
             isAudioSetup = true;
-            log("Audio setup complete (Web Mode)");
+            //log("Audio setup complete (Web Mode)");
         } catch (e) {
             log("Audio setup failed: " + e.message);
             // Fallback to simple mode if context fails
