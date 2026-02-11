@@ -219,7 +219,8 @@ document.addEventListener('DOMContentLoaded', () => {
         ctx.fillStyle = gradient;
 
         const bufferLength = 32; // Fixed bars for simplicity
-        const barWidth = (canvas.width / bufferLength) * 2.5;
+        // Calculate dynamic bar width to fit exact canvas width
+        const barWidth = (canvas.width / bufferLength) - 1;
         let x = 0;
 
         let dataArray;
